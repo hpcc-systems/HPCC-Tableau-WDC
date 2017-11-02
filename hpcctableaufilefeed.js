@@ -28,25 +28,20 @@ $.ajaxSetup({
     *************************************************************/
     myConnector.getSchema = function(schemaCallback)
     {
-        var hpccConnection;
-        var connProtocol = "http";
-        var hpccServer = "192.168.56.101";
-        var hpccPort = "8010"
+        var eclwatchurl = "http://localhost:8010";
+        var basictoken = "";
+
         if (tableau.connectionData != "")
         {
-            hpccConnection = JSON.parse(tableau.connectionData);
-            hpccServer = hpccConnection.server;
-            hpccPort = hpccConnection.port;
-        }
-
-        var basicauth = "";
-        if (tableau.authType = tableau.authTypeEnum.basic && tableau.username.length > 0 && tableau.password.length > 0)
-            basicauth = btoa(tableau.username.toString() + ":" + tableau.password.toString())
+            var hpccConnection = JSON.parse(tableau.connectionData);
+            eclwatchurl = hpccConnection.url;
+            basictoken = hpccConnection.basic;
+         }
 
         $.ajax(
                 {
-                    url: connProtocol + "://" + hpccServer + ":" + hpccPort + "/WsDfu/DFUQuery.json?ver_=1.36",
-                    headers: { "Authorization": "Basic " + basicauth.toString()}, //How do we conditionally include/exclude this entry?
+                    url: eclwatchurl +  "/WsDfu/DFUQuery.json?ver_=1.36&basic=" + basictoken,
+                    headers: { "Authorization": "Basic " + basictoken.toString()}, //How do we conditionally include/exclude this entry?
                     dataType: 'json',
                     error: function(xhr, error)
                     {
@@ -59,27 +54,15 @@ $.ajaxSetup({
                         var hpccFileName = "";
                         var files = json.DFUQueryResponse.DFULogicalFiles.DFULogicalFile;
 
-                        /*var cols = [];
-                        cols.push(
-                                {
-                                    "id" : "col1",
-                                    "description" : "firstcol",
-                                    "dataType" : tableau.dataTypeEnum.string
-                                });
-*/
-                        //tableschemas = [];
-    //                    var tableschemas = {id:"hello", alias:"study", columns:cols};
-                        //tableau.log("Resulting schema: " + JSON.stringify(tableSchemas));
                         var stringFiles = "[ ";
                         for (var fileindex = 0, len = files.length; fileindex < len; fileindex++)
-                        //for (var fileindex = 1, len = 2; fileindex < len; fileindex++)
                         {
                             hpccFileName = files[fileindex].Name;
 
                             $.ajax(
                                     {
-                                        url: connProtocol + "://" + hpccServer + ":" + hpccPort +  "/WsDfu/DFUGetFileMetaData.json?ver_=1.36&LogicalFileName=" + hpccFileName,
-                                        headers: { "Authorization": "Basic " + basicauth.toString()}, //How do we conditionally include/exclude this entry?
+                                        url: eclwatchurl +  "/WsDfu/DFUGetFileMetaData.json?ver_=1.36&LogicalFileName=" + hpccFileName +" &basic=" + basictoken,
+                                        headers: { "Authorization": "Basic " + basictoken.toString()}, //How do we conditionally include/exclude this entry?
                                         dataType: 'json',
                                         error: function(xhr, error)
                                         {
@@ -140,52 +123,27 @@ $.ajaxSetup({
     *************************************************************/
     myConnector.getData = function(table, doneCallback)
     {
+        var MAXRECS = 1000;
+
         var tablename = table.tableInfo.alias; // If reported by hpcc schema,
                                                 // this contains actual hpcc name
         if (tablename === "")
             tablename = table.tableInfo.id; // Tableau filenames are very
                                             // restrictive
-        var hpccConnection;
 
-        var connProtocol = "http";
-        var hpccServer = "192.168.56.101";
-        var hpccPort = "8010"
+        var eclwatchurl = "http://localhost:8010";
+        var basictoken = "";
+
         if (tableau.connectionData != "")
         {
-            hpccConnection = JSON.parse(tableau.connectionData);
-            hpccServer = hpccConnection.server;
-            hpccPort = hpccConnection.port;
-        }
-
-        var basicauth = "";
-        if (tableau.authType = tableau.authTypeEnum.basic && tableau.username.length > 0 && tableau.password.length > 0)
-            basicauth = btoa(tableau.username.toString() + ":" + tableau.password.toString())
-
-        /*var fileTotalCountURL = connProtocol + "://" + hpccServer + ":" + hpccPort + "/WsDfu/DFUBrowseData.json?LogicalName=" + tablename + "&SchemaOnly=1";
-        $.ajax({
-            url: fileTotalCountURL.toString(),
-            headers: { "Authorization": "Basic " + basicauth.toString()}, //How do we conditionally include/exclude this entry?
-            dataType: 'json',
-            error: function(xhr, error)
-            {
-                tableau.log("GetData: Error: Could not fetch total record count for HPCC File: " + tablename);
-                tableau.log(xhr.statusText);
-                doneCallback();
-            },
-            success: function(totresp)
-            {
-
-
-                */
-            var MAXRECS = 1000;
-
-        var lastId = parseInt(table.incrementValue || -1);
-
-        var fileDataFetchURL = connProtocol + "://" + hpccServer + ":" + hpccPort + "/WsDfu/DFUBrowseData.json?LogicalName=" + tablename + "&Start=0&Count=" + MAXRECS.toString();
+            var hpccConnection = JSON.parse(tableau.connectionData);
+            eclwatchurl = hpccConnection.url;
+            basictoken = hpccConnection.basic;
+         }
 
         $.ajax({
-                    url: fileDataFetchURL.toString(),
-                    headers: { "Authorization": "Basic " + basicauth.toString()}, //How do we conditionally include/exclude this entry?
+                    url: eclwatchurl + "/WsDfu/DFUBrowseData.json?LogicalName=" + tablename + "&Start=0&Count=" + MAXRECS.toString(),
+                    headers: { "Authorization": "Basic " + basictoken.toString()}, //How do we conditionally include/exclude this entry?
                     dataType: 'json',
                     error: function(xhr, error)
                     {
@@ -244,57 +202,70 @@ $.ajaxSetup({
                         doneCallback();
                     }
         });
-            //}
-        //});
     };
 
     tableau.registerConnector(myConnector);
 
     $(document).ready(function()
     {
-        $("#submitButton").click(function(){
+        $("#submitButton").click(function()
+          {
             if ($('#hpcc-password').val().trim().length == 0)
             {
-                tableau.abortForAuth();
+                tableau.abortForAuth(); //This keeps the custom dialog up
             }
             else
-                {
-            var connObj =
             {
-                    protocol: $('#conn-protocol').val().trim(),
-                    server: $('#hpcc-server').val().trim(),
-                    port: $('#hpcc-port').val().trim(),
-            };
-            tableau.username = $('#hpcc-user').val().trim();
-            tableau.password = $('#hpcc-password').val().trim()
+                var inputProtocol = $('#conn-protocol').val().trim();
+                if (inputProtocol == "")
+                    inputProtocol = "http";
 
-            tableau.connectionData = JSON.stringify(connObj);
-            tableau.connectionName = "HPCC Data Connection";
-            tableau.submit();
-                }
+                var inputServer = $('#hpcc-server').val().trim();
+                   if (inputServer == "")
+                       inputServer = "localhost";
+
+                   var inputPort = $('#hpcc-port').val().trim();
+                if (inputPort == "")
+                    inputPort = "8010";
+
+                var hpccurl = inputProtocol + "://" + inputServer + ":" + inputPort;
+
+                var inputUser = $('#hpcc-user').val().trim();
+                var inputPass = $('#hpcc-password').val().trim();
+                var basicauth = "";
+                if (inputUser != "" && inputPass != "")
+                    basicauth = btoa(inputUser + ":" + inputPass)
+
+                var connObj =
+                {
+                    url: hpccurl,
+                    basic: basicauth
+                };
+
+                tableau.username = $('#hpcc-user').val().trim();
+                tableau.password = $('#hpcc-password').val().trim()
+
+                tableau.connectionData = JSON.stringify(connObj);
+                tableau.connectionName = "HPCC Data Connection";
+                tableau.submit();
+            }
         });
     });
 
      myConnector.init = function(initCallback)
      {
-         var hpccConnection;
-
-         var connProtocol = "http";
-         var hpccServer = "192.168.56.101";
-         var hpccPort = "8010"
+         var eclwatchurl = "http://localhost:8010";
 
         if (tableau.connectionData != "")
         {
-            hpccConnection = JSON.parse(tableau.connectionData);
-            hpccServer = hpccConnection.server;
-            hpccPort = hpccConnection.port;
-        }
+            var hpccConnection = JSON.parse(tableau.connectionData);
+            eclwatchurl = hpccConnection.url;
+         }
 
-        var fileDataFetchURL = connProtocol + "://" + hpccServer + ":" + hpccPort;
 
-        $.ajax(
+          $.ajax(
                 {
-                    url: fileDataFetchURL.toString(),
+                    url: eclwatchurl.toString(),
                     dataType: 'json',
                     error: function(xhr, error)
                     {
@@ -359,32 +330,3 @@ function translateECLtoTableauTypes(eclType)
     else
         return tableau.dataTypeEnum.string;
 }
-
-/*
-function fetchFileInfo(url, filename, cb)
-{
-    var obj = new XMLHttpRequest();
-    obj.overrideMimeType("application/json");
-    obj.open("GET", url, true);
-
-    obj.onreadystatechange = function() {
-        if (obj.readyState == 4 && obj.status == "200") {
-            cb(obj.responseText, filename);
-        }
-    }
-    obj.send(null);
-}
-
-function loadJSON(url, cb) {
-    var obj = new XMLHttpRequest();
-    obj.overrideMimeType("application/json");
-    obj.open("GET", url, true);
-
-    obj.onreadystatechange = function() {
-        if (obj.readyState == 4 && obj.status == "200") {
-            cb(obj.responseText);
-        }
-    }
-    obj.send(null);
-}
-*/
