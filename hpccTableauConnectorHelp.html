@@ -1,0 +1,79 @@
+<!--
+
+    HPCC SYSTEMS software Copyright (C) 2017 HPCC Systems®.
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+
+<html>
+    <head>
+        <title>HPCC Web Data Connector for Tableau Help</title>
+        <meta http-equiv="Cache-Control" content="no-store" />
+
+        <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js" type="text/javascript"></script>
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
+
+        <script src="https://connectors.tableau.com/libs/tableauwdc-2.3.latest.js" type="text/javascript"></script>
+        <style type="text/css">
+            body
+            {
+                background: #1A9BD7;
+                display: -webkit-flex;
+                display: flex;s
+            }
+            .wrapper2
+            {
+                width:80%;
+                height:90%;
+                margin:auto;
+                background:white;
+                border-radius:25px;
+                padding:20px;
+            }
+        </style>
+    </head>
+
+    <body>
+        <div class="wrapper2">
+                <h2 class="text-center">HPCC WDC for Tableau - Help</h2>
+                <div class="text-center"><img src="./Loginlogo.png"/></div>
+
+<pre style="color: #000000; font-family: Arial, Helvetica, sans-serif; font-size: small; width: 600px; height: 275px;">
+The HPCC/Tableau connector allows you to access HPCC based data from Tableau Desktop.
+This connector makes use of the Tableau Web Data Connector API,
+which facilitates creating local data extracts based on foreign data (HPCC data in this case).
+
+The HPCC connector limits the size of the extract to 1000 records,
+but also provides a mechanism for updating the local extract.
+
+To connect, please provide the following information:
+
+<span style="background-color: #ffffff;">Protocol:   'http' or 'https' based on the connection type set up at the target HPCC System.</span>
+Server:     The IP or DNS entry where your HPCC Systems' ECLWatch page resides.
+<span style="background-color: #ffffff;">Port:       The port on which your HPCC System' ECLWatch listens (default is 8010)</span>
+UserName:   Your HPCC account user name (if security enabled)
+<span style="background-color: #ffffff;">Password:   Your HPCC account user password - Required by Tableau even if not used by HPCC.</span>
+FileName:   Full HPCC data file name. If specified, filters the metedata fetch to a single file.
+<span style="background-color: #ffffff;">Incremental Field ID: Field ID which can be used as a key for incremental data extract updates.
+                      This field should be a numeric, sorted(increasing) value.</span>
+
+<span style="color:orange;text-align: center">HPCC Server versions pre-7.0.0 do not support Cross Origin Resource Sharing (CORS)
+which might result in rejected requests from within Tableau.</span>
+</pre>
+
+            <div class="text-right"><a href="https://hpccsystems.com/bb/">Forums</a> | <a href="http://hpccsystems.com">Portal</a> | <a href="./hpccTableauConnector">Back</a> | v0.1</div>
+        </div>
+    </body>
+</html>
+

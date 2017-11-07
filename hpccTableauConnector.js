@@ -30,17 +30,25 @@ $.ajaxSetup({
     {
         var eclwatchurl = "http://localhost:8010";
         var basictoken = "";
+        var filename = "";
+        var fieldid = "";
 
         if (tableau.connectionData != "")
         {
             var hpccConnection = JSON.parse(tableau.connectionData);
             eclwatchurl = hpccConnection.url;
             basictoken = hpccConnection.basic;
-         }
+            filename = hpccConnection.file;
+            fieldid = hpccConnection.field;
 
+        }
+        var dfuqueryurl = eclwatchurl +  "/WsDfu/DFUQuery.json?ver_=1.36";
+        if (filename.length != 0)
+            dfuqueryurl = dfuqueryurl + "&LogicalName=" + filename;
+       
         $.ajax(
                 {
-                    url: eclwatchurl +  "/WsDfu/DFUQuery.json?ver_=1.36&basic=" + basictoken,
+                    url: dfuqueryurl.toString(),
                     headers: { "Authorization": "Basic " + basictoken.toString()}, //How do we conditionally include/exclude this entry?
                     dataType: 'json',
                     error: function(xhr, error)
@@ -73,21 +81,26 @@ $.ajaxSetup({
                                         {
                                             var metacols = [];
                                             var dfucols = filecoldataresp.DFUGetFileMetaDataResponse.DataColumns.DFUDataColumn;
+                                            var inccolfound = false;
                                             for (var colindex = 0, len = dfucols.length; colindex < len; colindex++)
                                             {
                                                 var dfucol = dfucols[colindex];
+                                                if (fieldid == dfucol.ColumnLabel)
+                                                    inccolfound = true;
+
                                                 if (dfucol.ColumnLabel != "__fileposition__")
                                                 {
                                                     var fielddescription = "EclType: " + dfucol.ColumnEclType;
                                                     metacols.push(
                                                             {
-                                                                "id" : dfucols[colindex].ColumnLabel,
+                                                                "id" : dfucol.ColumnLabel,
                                                                 "description" : fielddescription,
                                                                 "dataType" : translateECLtoTableauTypes(dfucol.ColumnEclType)
                                                             });
                                                 }
                                             }
-
+                                            if (hpccFileName != filename)
+                                                inccolfound = false;
                                             // HPCC file scope delimiters ":", and ".", "-" are not legal tableau file name chars
                                             // there might be other chars that need filtering
                                             var normalizedfilename = hpccFileName.split(':').join('_');
@@ -99,12 +112,9 @@ $.ajaxSetup({
                                                 id : normalizedfilename.toString(),
                                                 alias : hpccFileName.toString(),
                                                 columns : metacols,
-                                                description: "Filenameadfasdf"
+                                                description: "",
+                                                incrementColumnId: inccolfound ? fieldid.toString() : ""
                                             };
-                                            //tableau.log("TableSchema: " + JSON.stringify(tableSchema))
-                                            //var tableCopy = JSON.parse(JSON.stringify(tableSchema));
-                                            //schemaCallback([tableSchema]);
-                                            //tableschemas.push(tableCopy);
                                             stringFiles = stringFiles + JSON.stringify(tableSchema);
                                         }
                                     });
@@ -139,10 +149,12 @@ $.ajaxSetup({
             var hpccConnection = JSON.parse(tableau.connectionData);
             eclwatchurl = hpccConnection.url;
             basictoken = hpccConnection.basic;
-         }
+        }
+
+        var lastId = parseInt(table.incrementValue || 0);
 
         $.ajax({
-                    url: eclwatchurl + "/WsDfu/DFUBrowseData.json?LogicalName=" + tablename + "&Start=0&Count=" + MAXRECS.toString(),
+                    url: eclwatchurl + "/WsDfu/DFUBrowseData.json?LogicalName=" + tablename + "&Start="+ lastId + "&Count=" + MAXRECS.toString(),
                     headers: { "Authorization": "Basic " + basictoken.toString()}, //How do we conditionally include/exclude this entry?
                     dataType: 'json',
                     error: function(xhr, error)
@@ -196,6 +208,7 @@ $.ajaxSetup({
                                 }
                                 tableData.push(jsonRow);
                             }
+                            table.incrementValue = lastId + rows.length;
                             table.appendRows(tableData);
                         }
 
@@ -212,7 +225,7 @@ $.ajaxSetup({
           {
             if ($('#hpcc-password').val().trim().length == 0)
             {
-                tableau.abortForAuth(); //This keeps the custom dialog up
+                $('#errorMsg').show().html('Please Enter Password (Tableau Desktop requirement even if not needed by your HPCC)'); // show and set the message
             }
             else
             {
@@ -239,7 +252,9 @@ $.ajaxSetup({
                 var connObj =
                 {
                     url: hpccurl,
-                    basic: basicauth
+                    basic: basicauth,
+                    field:  $('#hpcc-fieldid').val().trim(),
+                    file:  $('#hpcc-file').val().trim(),
                 };
 
                 tableau.username = $('#hpcc-user').val().trim();
@@ -254,30 +269,7 @@ $.ajaxSetup({
 
      myConnector.init = function(initCallback)
      {
-         var eclwatchurl = "http://localhost:8010";
-
-        if (tableau.connectionData != "")
-        {
-            var hpccConnection = JSON.parse(tableau.connectionData);
-            eclwatchurl = hpccConnection.url;
-         }
-
-
-          $.ajax(
-                {
-                    url: eclwatchurl.toString(),
-                    dataType: 'json',
-                    error: function(xhr, error)
-                    {
-                        tableau.authType = tableau.authTypeEnum.basic;
-                    },
-                    success: function(resp)
-                    {
-                        tableau.authType = tableau.authTypeEnum.none;
-                    }
-                }
-            );
-
+          tableau.authType = tableau.authTypeEnum.basic;
           initCallback();
       };
 
