@@ -84,7 +84,7 @@
         <div class="wrapper2">
           <h2 class="text-center">HPCC WDC for Tableau</h2>
           <div class="text-center"><img src="./Loginlogo.png"/></div>
-          <h4 class="text-center">HPCC Connection Information</h4>
+          <!-- h4 class="text-center">HPCC Connection Information</h4-->
 
           <form class="myform">
            <div class="myrow">
@@ -113,10 +113,22 @@
            </div>
            <div class="myrow">
             <span class="form-control-wrapper2">
-                <label class="form-label" id="fileid" for="hpcc-file">File Name:</label>
-                <input type="text" class="form-control" id="hpcc-file" value=""/>
+                <label class="form-label" id="fileprefix" for="hpcc-file-prefix">File Fetch Criteria:</label>
+                <input type="radio" name="FileFetch" value="SingleFile" checked="true" id="hpcc-single-file" onClick="toggle('hpcc-fetchall','hpcc-file-prefix');toggle('hpcc-fetchall','hpcc-fieldid');changeLabel('fileprefixlabel', '*File Name:')">Single File</input>
             </span>
             <span class="form-control-wrapper2">
+                <input type="radio" name="FileFetch" value="FileFilter" id="hpcc-file-filter" onClick="toggle('hpcc-fetchall','hpcc-file-prefix');toggle('hpcc-fetchall','hpcc-fieldid');changeLabel('fileprefixlabel', '*File Name Prefix:')">File Name Prefix</input>
+            </span>
+            <span class="form-control-wrapper2">
+                <input type="radio" name="FileFetch" value="AllFiles" id="hpcc-fetchall" onClick="toggle('hpcc-fetchall','hpcc-file-prefix');toggle('hpcc-fetchall','hpcc-fieldid');">All Files</input>
+            </span>
+           </div>
+           <div class="myrow">
+            <span class="form-control-wrapper2">
+                <label class="form-label" id="fileprefixlabel" for="hpcc-file-prefix">*File Name:</label>
+                <input type="text" class="form-control" id="hpcc-file-prefix" value=""/>
+            </span>
+             <span class="form-control-wrapper2">
                 <label class="form-label" id="incid" for="hpcc-incfieldid">Incremental Field ID:</label>
                 <input type="text" class="form-control" id="hpcc-fieldid" value=""/>
             </span>
@@ -126,7 +138,7 @@
               <button type = "button" id = "submitButton" class = "btn btn-primary" >Create HPCC Connector</button>
               <div id="errorMsg" class="error-msg"></div>
           </div>
-          <div class="text-right"><a href="http://hpccsystems.com">Portal</a> | <a href="./hpccTableauConnectorHelp">Help</a> | v0.1</div>
+          <div class="text-right"><a href="http://hpccsystems.com">Portal</a> | <a href="./hpccTableauConnectorHelp">Help</a> | v0.2 </div>
         </div>
     </body>
 </html>

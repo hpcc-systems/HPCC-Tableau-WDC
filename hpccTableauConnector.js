@@ -30,6 +30,7 @@ $.ajaxSetup({
     {
         var eclwatchurl = "http://localhost:8010";
         var basictoken = "";
+        var fileprefix = "";
         var filename = "";
         var fieldid = "";
 
@@ -38,14 +39,16 @@ $.ajaxSetup({
             var hpccConnection = JSON.parse(tableau.connectionData);
             eclwatchurl = hpccConnection.url;
             basictoken = hpccConnection.basic;
+            fileprefix = hpccConnection.fileprefix
             filename = hpccConnection.file;
             fieldid = hpccConnection.field;
-
         }
         var dfuqueryurl = eclwatchurl +  "/WsDfu/DFUQuery.json?ver_=1.36";
         if (filename.length != 0)
             dfuqueryurl = dfuqueryurl + "&LogicalName=" + filename;
-       
+        else if (fileprefix != 0)
+            dfuqueryurl = dfuqueryurl + "&Prefix=" + fileprefix;
+        var stringFiles = "[ ";
         $.ajax(
                 {
                     url: dfuqueryurl.toString(),
@@ -57,75 +60,99 @@ $.ajaxSetup({
                         tableau.log(xhr.statusText);
                         schemaCallback([]);
                     },
-                    success: function(json)
+                    success: function(filessearchresp)
                     {
-                        var hpccFileName = "";
-                        var files = json.DFUQueryResponse.DFULogicalFiles.DFULogicalFile;
 
-                        var stringFiles = "[ ";
-                        for (var fileindex = 0, len = files.length; fileindex < len; fileindex++)
-                        {
-                            hpccFileName = files[fileindex].Name;
+                          if ('exceptions' in filessearchresp)
+                          {
+                              for (var ei = 0, len = filessearchresp.exceptions.exception.length; ei < len; ei++)
+                              {
+                                  tableau.log(filessearchresp.exceptions.exception[ei].message);
+                              }
+                          }
+                          else
+                          {
+                            var hpccFileName = "";
+                            var files = filessearchresp.DFUQueryResponse.DFULogicalFiles.DFULogicalFile;
 
-                            $.ajax(
-                                    {
-                                        url: eclwatchurl +  "/WsDfu/DFUGetFileMetaData.json?ver_=1.36&LogicalFileName=" + hpccFileName +" &basic=" + basictoken,
-                                        headers: { "Authorization": "Basic " + basictoken.toString()}, //How do we conditionally include/exclude this entry?
-                                        dataType: 'json',
-                                        error: function(xhr, error)
+                            var filemetafetched = false;
+                            for (var fileindex = 0, len = files.length; fileindex < len; fileindex++)
+                            {
+                                hpccFileName = files[fileindex].Name;
+                                $.ajax(
                                         {
-                                            tableau.log("GetSchema: Error: Could not fetch metadata for HPCC File: " + hpccFileName);
-                                            tableau.log(xhr.statusText);
-                                        },
-                                        success: function(filecoldataresp)
-                                        {
-                                            var metacols = [];
-                                            var dfucols = filecoldataresp.DFUGetFileMetaDataResponse.DataColumns.DFUDataColumn;
-                                            var inccolfound = false;
-                                            for (var colindex = 0, len = dfucols.length; colindex < len; colindex++)
+                                            url: eclwatchurl +  "/WsDfu/DFUGetFileMetaData.json?ver_=1.36&LogicalFileName=" + hpccFileName +" &basic=" + basictoken,
+                                            headers: { "Authorization": "Basic " + basictoken.toString()}, //How do we conditionally include/exclude this entry?
+                                            dataType: 'json',
+                                            timeout: 5000,
+                                            //async: true,
+                                            error: function(xhr, error)
                                             {
-                                                var dfucol = dfucols[colindex];
-                                                if (fieldid == dfucol.ColumnLabel)
-                                                    inccolfound = true;
-
-                                                if (dfucol.ColumnLabel != "__fileposition__")
+                                                tableau.log("GetSchema: Error: Could not fetch metadata for HPCC File: " + hpccFileName);
+                                                tableau.log(xhr.statusText);
+                                            },
+                                            success: function(filecoldataresp)
+                                            {
+                                                var metacols = [];
+                                                if ('Exceptions' in filecoldataresp)
                                                 {
-                                                    var fielddescription = "EclType: " + dfucol.ColumnEclType;
-                                                    metacols.push(
-                                                            {
-                                                                "id" : dfucol.ColumnLabel,
-                                                                "description" : fielddescription,
-                                                                "dataType" : translateECLtoTableauTypes(dfucol.ColumnEclType)
-                                                            });
+                                                    for (var ei = 0, len = filecoldataresp.Exceptions.Exception.length; ei < len; ei++)
+                                                    {
+                                                        tableau.log(filecoldataresp.Exceptions.Exception[ei].Message);
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    var dfucols = filecoldataresp.DFUGetFileMetaDataResponse.DataColumns.DFUDataColumn;
+                                                    var inccolfound = false;
+                                                    for (var colindex = 0, len = dfucols.length; colindex < len; colindex++)
+                                                    {
+                                                        var dfucol = dfucols[colindex];
+                                                        if (fieldid == dfucol.ColumnLabel)
+                                                            inccolfound = true;
+
+                                                        if (dfucol.ColumnLabel != "__fileposition__")
+                                                        {
+                                                            var fielddescription = "EclType: " + dfucol.ColumnEclType;
+                                                            metacols.push(
+                                                                    {
+                                                                        "id" : dfucol.ColumnLabel,
+                                                                        "description" : fielddescription,
+                                                                        "dataType" : translateECLtoTableauTypes(dfucol.ColumnEclType)
+                                                                    });
+                                                        }
+                                                    }
+                                                    if (hpccFileName != filename)
+                                                        inccolfound = false;
+                                                    // HPCC file scope delimiters ":", and ".", "-" are not legal tableau file name chars
+                                                    // there might be other chars that need filtering
+                                                    var normalizedfilename = hpccFileName.split(':').join('_');
+                                                    normalizedfilename = normalizedfilename.split('.').join('_');
+                                                    normalizedfilename = normalizedfilename.split('-').join('_');
+
+                                                    var tableSchema =
+                                                    {
+                                                        id : normalizedfilename.toString(),
+                                                        alias : hpccFileName.toString(),
+                                                        columns : metacols,
+                                                        description: "",
+                                                        incrementColumnId: inccolfound ? fieldid.toString() : ""
+                                                    };
+                                                    if (!filemetafetched)
+                                                         filemetafetched = true;
+                                                    else
+                                                        stringFiles = stringFiles + " , ";
+                                                    stringFiles = stringFiles + JSON.stringify(tableSchema);
                                                 }
                                             }
-                                            if (hpccFileName != filename)
-                                                inccolfound = false;
-                                            // HPCC file scope delimiters ":", and ".", "-" are not legal tableau file name chars
-                                            // there might be other chars that need filtering
-                                            var normalizedfilename = hpccFileName.split(':').join('_');
-                                            normalizedfilename = normalizedfilename.split('.').join('_');
-                                            normalizedfilename = normalizedfilename.split('-').join('_');
-
-                                            var tableSchema =
-                                            {
-                                                id : normalizedfilename.toString(),
-                                                alias : hpccFileName.toString(),
-                                                columns : metacols,
-                                                description: "",
-                                                incrementColumnId: inccolfound ? fieldid.toString() : ""
-                                            };
-                                            stringFiles = stringFiles + JSON.stringify(tableSchema);
-                                        }
-                                    });
-                            if (fileindex + 1 < len)
-                                stringFiles = stringFiles + ","
+                                        });
+                            }
                         }
-                        stringFiles = stringFiles + " ]";
-                        tableau.log("JSON: " + stringFiles);
-                        schemaCallback(JSON.parse(stringFiles));
                     }
                 });
+        stringFiles = stringFiles + " ]";
+        console.log("JSON: " + stringFiles);
+        schemaCallback(JSON.parse(stringFiles))
     };
 
     /*************************************************************
@@ -152,15 +179,21 @@ $.ajaxSetup({
         }
 
         var lastId = parseInt(table.incrementValue || 0);
+        var filetotal = 0;
+        var rowsread = 0;
+        var stop = false;
+        while (rowsread <= filetotal && !stop)
+        {
 
         $.ajax({
-                    url: eclwatchurl + "/WsDfu/DFUBrowseData.json?LogicalName=" + tablename + "&Start="+ lastId + "&Count=" + MAXRECS.toString(),
+                    url: eclwatchurl + "/WsDfu/DFUBrowseData.json?LogicalName=" + tablename + "&Start="+ rowsread + "&Count=" + MAXRECS.toString(),
                     headers: { "Authorization": "Basic " + basictoken.toString()}, //How do we conditionally include/exclude this entry?
                     dataType: 'json',
                     error: function(xhr, error)
                     {
                         tableau.log("GetData: Error: Could not fetch data for HPCC File: " + tablename);
                         tableau.log(xhr.statusText);
+                        stop = true;
                         doneCallback();
                     },
                     success: function(resp)
@@ -178,10 +211,12 @@ $.ajaxSetup({
                                     tableau.log(resp.Exceptions.Exception[ei].Message);
                                 }
                             }
+                            stop = true;
+                            doneCallback();
                         }
                         else
                         {
-                            var filetotal = resp.DFUBrowseDataResponse.Total;
+                            filetotal = resp.DFUBrowseDataResponse.Total;
                             if (filetotal > MAXRECS)
                             {
                                 tableau.log("GetData: WARNING: data fetches are limited to 10000 records out of " + filetotal + " total records." );
@@ -195,6 +230,13 @@ $.ajaxSetup({
                                                                                             //should we do this once and reuse? is it thread safe?
                             var xmlDoc = parser.parseFromString(rootedresult,"text/xml");     //important to use "text/xml"
                             var rows = xmlDoc.getElementsByTagName("Row");
+                            if (rows.length === 0)
+                            {
+                                stop = true;
+                                doneCallback();
+                            }
+
+                            rowsread += rows.length;
                             var tableData = [];
                             for (var rowindex = 0, len = rows.length; rowindex < len; rowindex++)
                             {
@@ -212,9 +254,11 @@ $.ajaxSetup({
                             table.appendRows(tableData);
                         }
 
-                        doneCallback();
+                        //doneCallback();
                     }
         });
+        doneCallback();
+        }
     };
 
     tableau.registerConnector(myConnector);
@@ -223,9 +267,21 @@ $.ajaxSetup({
     {
         $("#submitButton").click(function()
           {
-            if ($('#hpcc-password').val().trim().length == 0)
+            if ($('#hpcc-single-file').is(":checked") == true && $('#hpcc-file-prefix').val().trim().length == 0)
             {
-                $('#errorMsg').show().html('Please Enter Password (Tableau Desktop requirement even if not needed by your HPCC)'); // show and set the message
+                $('#errorMsg').show().html('Please enter target HPCC file name, or change fetch criteria');
+            }
+            else if ($('#hpcc-file-filter').is(":checked") == true && $('#hpcc-file-prefix').val().trim().length == 0)
+            {
+                $('#errorMsg').show().html('Please enter an HPCC file name filter, or change fetch criteria');
+            }
+            else if ($('#hpcc-fetchall').is(":checked") == false && $('#hpcc-file-prefix').val().trim().length == 0)
+            {
+                $('#errorMsg').show().html('Please enter File Fetch Criteria. ("All Files" - not recommended)');
+            }
+            else if ($('#hpcc-password').val().trim().length == 0)
+            {
+                $('#errorMsg').show().html('Please enter Password. <br> (Tableau Desktop requirement even if not needed by your HPCC)');
             }
             else
             {
@@ -254,7 +310,8 @@ $.ajaxSetup({
                     url: hpccurl,
                     basic: basicauth,
                     field:  $('#hpcc-fieldid').val().trim(),
-                    file:  $('#hpcc-file').val().trim(),
+                    file:  $('#hpcc-single-file').is(":checked") == true ? $('#hpcc-file-prefix').val().trim() : '',
+                    fileprefix: $('#hpcc-file-filter').is(":checked") == true ? $('#hpcc-file-prefix').val().trim() : '',
                 };
 
                 tableau.username = $('#hpcc-user').val().trim();
@@ -321,4 +378,16 @@ function translateECLtoTableauTypes(eclType)
         //mapECLTypeNameToSQLType.put("GYEARMONTH", java.sql.Types.DATE);
     else
         return tableau.dataTypeEnum.string;
+}
+
+function changeLabel(labelId, newLabelValue) {
+    var targetLabel = document.getElementById(labelId);
+    if (targetLabel)
+        targetLabel.innerHTML  = newLabelValue;
+}
+
+function toggle(checkboxId, toggleId) {
+    var checkbox = document.getElementById(checkboxId);
+    var fieldToToggle = document.getElementById(toggleId);
+    fieldToToggle.disabled = checkbox.checked;
 }

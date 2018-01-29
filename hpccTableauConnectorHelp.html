@@ -30,7 +30,7 @@
             {
                 background: #1A9BD7;
                 display: -webkit-flex;
-                display: flex;s
+                display: flex;
             }
             .wrapper2
             {
@@ -46,33 +46,37 @@
 
     <body>
         <div class="wrapper2">
-                <h2 class="text-center">HPCC WDC for Tableau - Help</h2>
-                <div class="text-center"><img src="./Loginlogo.png"/></div>
+            <h2 class="text-center">HPCC WDC for Tableau - Help</h2>
+            <div class="text-center"><img src="./Loginlogo.png"/></div>
 
-<pre style="color: #000000; font-family: Arial, Helvetica, sans-serif; font-size: small; width: 600px; height: 275px;">
+			<pre style="color: #000000; font-family: Arial, Helvetica, sans-serif; font-size: small; width: 600px; height: 275px;">
 The HPCC/Tableau connector allows you to access HPCC based data from Tableau Desktop.
-This connector makes use of the Tableau Web Data Connector API,
-which facilitates creating local data extracts based on foreign data (HPCC data in this case).
-
-The HPCC connector limits the size of the extract to 1000 records,
-but also provides a mechanism for updating the local extract.
+This connector uses the Tableau Web Data Connector API, which facilitates creating
+local data extracts based on foreign data (HPCC data in this case).
 
 To connect, please provide the following information:
 
 <span style="background-color: #ffffff;">Protocol:   'http' or 'https' based on the connection type set up at the target HPCC System.</span>
-Server:     The IP or DNS entry where your HPCC Systems' ECLWatch page resides.
+<span>Server:     The IP or DNS entry where your HPCC Systems' ECLWatch page resides.</span>
 <span style="background-color: #ffffff;">Port:       The port on which your HPCC System' ECLWatch listens (default is 8010)</span>
-UserName:   Your HPCC account user name (if security enabled)
+<span>UserName:   Your HPCC account user name (if security enabled)</span>
 <span style="background-color: #ffffff;">Password:   Your HPCC account user password - Required by Tableau even if not used by HPCC.</span>
-FileName:   Full HPCC data file name. If specified, filters the metedata fetch to a single file.
-<span style="background-color: #ffffff;">Incremental Field ID: Field ID which can be used as a key for incremental data extract updates.
-                      This field should be a numeric, sorted(increasing) value.</span>
 
-<span style="color:orange;text-align: center">HPCC Server versions pre-7.0.0 do not support Cross Origin Resource Sharing (CORS)
-which might result in rejected requests from within Tableau.</span>
-</pre>
+The connector provides a list of HPCC files available, this process can be long and problematic.
+You should consider filtering the set of files reported by providing a name prefix, or by fetching
+information for a single file.
 
-            <div class="text-right"><a href="https://hpccsystems.com/bb/">Forums</a> | <a href="http://hpccsystems.com">Portal</a> | <a href="./hpccTableauConnector">Back</a> | v0.1</div>
+<span>File Fetch Criteria: Specify how the HPCC file list will be populated upon connection <BR>                            Single File | Filtered File List | All Files</span>
+<span style="background-color: #ffffff;">File Name:  Either a single file name, or the prefix of a file set.</span>
+<span>Incremental Field ID: Field ID which can be used as a key for incremental data extract updates.<BR>                               This field should be a numeric, sorted(increasing) value.</span>
+
+<div>
+	<span style="color:orange;text-align: center">HPCC Server versions pre-7.0.0 do not support Cross Origin Resource Sharing (CORS)</span>
+    <span style="color:orange;text-align: center">which might result in rejected requests from within Tableau.</span>
+</div>
+			</pre>
+
+            <div class="text-right"><a href="https://hpccsystems.com/bb/">Forums</a> | <a href="http://hpccsystems.com">Portal</a> | <a href="./hpccTableauConnector">Back</a> | v0.2</div>
         </div>
     </body>
 </html>
